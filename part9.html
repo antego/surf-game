@@ -1,0 +1,391 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Making your first Phaser 3 Game - Part 9</title>
+    <script src="../phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+/**
+ * 
+ * Game configurations.
+ * @name configurations
+ */
+ const configurations = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: {
+                y: 300
+            },
+            debug: true
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+}
+
+/**
+ *  Game assets.
+ *  @name assets
+ */
+const assets = {
+    bird: {
+        red: 'bird-red',
+    },
+    obstacle: {
+        pipe: {
+            green: {
+                bottom: 'pipe-green-bottom'
+            }
+        }
+    },
+    scene: {
+        width: 400,
+        background: {
+            day: 'background-day',
+        },
+        ground: 'ground',
+        gameOver: 'game-over',
+        restart: 'restart-button',
+        messageInitial: 'message-initial'
+    },
+    animation: {
+        bird: {
+            red: {
+                clapWings: 'red-clap-wings',
+                stop: 'red-stop'
+            },
+        }
+    }
+}
+
+// Game
+/**
+ * The main controller for the entire Phaser game.
+ * @name game
+ * @type {object}
+ */
+const game = new Phaser.Game(configurations)
+
+/**
+ * If it had happened a game over.
+ * @type {boolean}
+ */
+let gameOver
+/**
+ * If the game has been started.
+ * @type {boolean}
+ */
+let gameStarted
+/**
+ * Up button component.
+ * @type {object}
+ */
+let upButton
+/**
+ * Restart button component.
+ * @type {object}
+ */
+let restartButton
+/**
+ * Game over banner component.
+ * @type {object}
+ */
+let gameOverBanner
+/**
+ * Message initial component.
+ * @type {object}
+ */
+let messageInitial
+// Bird
+/**
+ * Player component.
+ * @type {object}
+ */
+let player
+/**
+ * Bird name asset.
+ * @type {string}
+ */
+let birdName
+/**
+ * Quantity frames to move up.
+ * @type {number}
+ */
+let framesMoveUp
+// Background
+/**
+ * Day background component.
+ * @type {object}
+ */
+let backgroundDay
+/**
+ * Ground component.
+ * @type {object}
+ */
+let ground
+// pipes
+/**
+ * Pipes group component.
+ * @type {object}
+ */
+let pipesGroup
+/**
+ * Gaps group component.
+ * @type {object}
+ */
+let gapsGroup
+/**
+ * Counter till next pipes to be created.
+ * @type {number}
+ */
+let nextPipes = 399
+/**
+ * Current pipe asset.
+ * @type {object}
+ */
+let currentPipe
+// score variables
+/**
+ * Score counter.
+ * @type {number}
+ */
+let score
+
+let cursors;
+
+/**
+ *   Load the game assets.
+ */
+function preload() {
+    // Backgrounds and ground
+    this.load.image(assets.scene.background.day, 'assets2/maroubra.jpg')
+    this.load.image(assets.scene.ground, 'assets2/pngwing.com.png')
+
+    // Pipes
+    this.load.image(assets.obstacle.pipe.green.bottom, 'assets2/wave2.png')
+
+
+    // Start game
+    this.load.image(assets.scene.messageInitial, 'assets2/message-initial.png')
+
+    // End game
+    this.load.image(assets.scene.gameOver, 'assets2/gameover.png')
+    this.load.image(assets.scene.restart, 'assets2/restart-button.png')
+
+    // Birds
+    this.load.image(assets.bird.red, 'assets2/dude.png')
+}
+
+/**
+ *   Create the game objects (images, groups, sprites and animations).
+ */
+function create() {
+    backgroundDay = this.add.image(assets.scene.width, 300, assets.scene.background.day).setInteractive()
+    backgroundDay.on('pointerdown', moveBird)
+
+    gapsGroup = this.physics.add.group()
+    pipesGroup = this.physics.add.group()
+
+    ground = this.physics.add.staticImage(assets.scene.width, 600, assets.scene.ground)
+    // ground.setTint(0x334A56);
+    // ground.setCollideWorldBounds(true)
+    ground.setDepth(10)
+    ground.refreshBody()
+    ground.body.setSize(800, 50)
+
+    messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
+    messageInitial.setDepth(30)
+    messageInitial.visible = false
+
+    upButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP)
+
+    cursors = this.input.keyboard.createCursorKeys();
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontFamily: 'serif', fontSize: '48px', fill: '#000' });
+
+    prepareGame(this)
+    
+    gameOverBanner = this.add.image(assets.scene.width, 206, assets.scene.gameOver)
+    gameOverBanner.setDepth(20)
+    gameOverBanner.visible = false
+
+    restartButton = this.add.image(assets.scene.width, 300, assets.scene.restart).setInteractive()
+    restartButton.on('pointerdown', restartGame)
+    restartButton.setDepth(20)
+    restartButton.visible = false
+}
+
+/**
+ *  Update the scene frame by frame, responsible for move and rotate the bird and to create and move the pipes.
+ */
+function update() {
+    if (gameOver || !gameStarted)
+        return
+
+    // if (framesMoveUp > 0)
+    //     framesMoveUp--
+    // else if (Phaser.Input.Keyboard.JustDown(upButton))
+    //     moveBird()
+    // else {
+    //     player.setVelocityY(120)
+    // }
+
+    if ((cursors.up.isDown || Phaser.Input.Keyboard.JustDown(upButton))
+         && player.body.touching.down) {
+        moveBird()
+    }
+
+    pipesGroup.children.iterate(function (child) {
+        if (child == undefined)
+            return
+
+        if (child.x < -50)
+            child.destroy()
+        else
+            child.setVelocityX(-100)
+    })
+
+    gapsGroup.children.iterate(function (child) {
+        child.body.setVelocityX(-100)
+    })
+
+    nextPipes++
+    if (nextPipes >= 400) {
+        makePipes(game.scene.scenes[0])
+        nextPipes = 0
+    }
+}
+
+/**
+ *  Bird collision event.
+ *  @param {object} player - Game object that collided, in this case the bird. 
+ */
+function hitBird(player) {
+    this.physics.pause()
+
+    gameOver = true
+    gameStarted = false
+
+    gameOverBanner.visible = true
+    restartButton.visible = true
+}
+
+/**
+ *   Update the scoreboard.
+ *   @param {object} _ - Game object that overlapped, in this case the bird (ignored).
+ *   @param {object} gap - Game object that was overlapped, in this case the gap.
+ */
+function updateScore(_, gap) {
+    score++
+    console.log(score)
+    gap.destroy()
+}
+
+/**
+ * Create pipes and gap in the game.
+ * @param {object} scene - Game scene.
+ */
+function makePipes(scene) {
+    if (!gameStarted || gameOver) return
+
+    const gap = scene.add.line(870, 600, 0, 0, 100, -375)
+    gapsGroup.add(gap)
+    gap.body.allowGravity = false
+    gap.visible = true
+
+    console.log("make pipe")
+
+    const pipe = scene.physics.add.image(800, 570, currentPipe.bottom)
+    pipe.body.setSize(50, 50)
+    pipe.body.setOffset(20, 20)
+    // pipe.setTint(0xC3C8CF);
+
+    pipesGroup.add(pipe)
+    pipe.body.allowGravity = false
+    // pipe.setScale(0.125)
+}
+
+/**
+ * Move the bird in the screen.
+ */
+function moveBird() {
+    if (gameOver)
+        return
+
+    if (!gameStarted)
+        startGame(game.scene.scenes[0])
+
+    player.setVelocityY(-300)
+}
+
+/**
+ * Restart the game. 
+ * Clean all groups, hide game over objects and stop game physics.
+ */
+function restartGame() {
+    pipesGroup.clear(true, true)
+    gapsGroup.clear(true, true)
+    player.destroy()
+    gameOverBanner.visible = false
+    restartButton.visible = false
+
+    const gameScene = game.scene.scenes[0]
+    prepareGame(gameScene)
+
+    gameScene.physics.resume()
+}
+
+/**
+ * Restart all variable and configurations, show main and recreate the bird.
+ * @param {object} scene - Game scene.
+ */
+function prepareGame(scene) {
+    framesMoveUp = 0
+    nextPipes = 0
+    currentPipe = assets.obstacle.pipe.green
+    score = 0
+    gameOver = false
+    backgroundDay.visible = true
+    messageInitial.visible = true
+
+    birdName = assets.bird.red
+    player = scene.physics.add.image(60, 265, birdName)
+    player.setScale(0.50)
+    player.body.setSize(100, 100)
+    player.body.setOffset(100, 110)
+    player.setCollideWorldBounds(true)
+
+    scene.physics.add.collider(player, ground)
+    scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)
+
+    scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
+}
+
+/**
+ * Start the game, create pipes and hide the main menu.
+ * @param {object} scene - Game scene.
+ */
+function startGame(scene) {
+    gameStarted = true
+    messageInitial.visible = false
+
+    nextPipes = 400
+}
+</script>
+
+</body>
+</html>
