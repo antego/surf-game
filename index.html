@@ -272,7 +272,7 @@ function update() {
         nextPipes = Phaser.Math.Between(200, 300);
     }
 
-    if (score >= 13 && seacowLifetime >= 600) {
+    if (score >= 0 && seacowLifetime >= 600) {
         launchCow(game.scene.scenes[0])
         seacowLifetime = Phaser.Math.Between(0, 300);
     }
@@ -345,7 +345,7 @@ function makePipes(scene) {
 
     console.log("make pipe")
 
-    const pipe = scene.physics.add.image(900, 570, currentPipe.bottom)
+    const pipe = scene.physics.add.image(900, 540, currentPipe.bottom)
     pipe.body.setSize(50, 50)
     pipe.body.setOffset(20, 20)
     // pipe.setTint(0xC3C8CF);
@@ -357,7 +357,7 @@ function makePipes(scene) {
 
 function launchCow(scene) {
     destroyCow()
-    seacow = scene.physics.add.image(1400, 1025, assets.seacow)
+    seacow = scene.physics.add.image(800, 610, assets.seacow)
     seacow.body.allowGravity = false
     scene.physics.add.collider(player, seacow, hitPlayerWithCow, null, scene)
     seacow.setVelocityX(-200)
