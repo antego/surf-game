@@ -26,9 +26,9 @@
         default: 'arcade',
         arcade: {
             gravity: {
-                y: 300
+                y: 400
             },
-            debug: true
+            // debug: true
         }
     },
     scene: {
@@ -53,6 +53,7 @@ const assets = {
             }
         }
     },
+    seacow: 'seacow',
     scene: {
         width: 400,
         background: {
@@ -117,6 +118,12 @@ let messageInitial
  * @type {object}
  */
 let player
+let playerSpinning
+
+let seacow
+let seacowLifetime
+let seacowJumped
+let seacowJumpPoint
 /**
  * Bird name asset.
  * @type {string}
@@ -153,7 +160,7 @@ let gapsGroup
  * Counter till next pipes to be created.
  * @type {number}
  */
-let nextPipes = 399
+let nextPipes
 /**
  * Current pipe asset.
  * @type {object}
@@ -189,6 +196,8 @@ function preload() {
 
     // Birds
     this.load.image(assets.bird.red, 'assets2/dude.png')
+    // Seacows
+    this.load.image(assets.seacow, 'assets2/seacow.png')
 }
 
 /**
@@ -196,6 +205,7 @@ function preload() {
  */
 function create() {
     backgroundDay = this.add.image(assets.scene.width, 300, assets.scene.background.day).setInteractive()
+    backgroundDay.on('pointerdown', startGameOnTap)
     backgroundDay.on('pointerdown', moveBird)
 
     gapsGroup = this.physics.add.group()
@@ -208,7 +218,7 @@ function create() {
     ground.refreshBody()
     ground.body.setSize(800, 50)
 
-    messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
+    messageInitial = this.add.text(100, 156, 'Tap on the screen to start', { fontFamily: 'serif', fontSize: '48px', fill: '#000', align: 'center' });
     messageInitial.setDepth(30)
     messageInitial.visible = false
 
@@ -236,17 +246,9 @@ function update() {
     if (gameOver || !gameStarted)
         return
 
-    // if (framesMoveUp > 0)
-    //     framesMoveUp--
-    // else if (Phaser.Input.Keyboard.JustDown(upButton))
-    //     moveBird()
-    // else {
-    //     player.setVelocityY(120)
-    // }
-
-    if ((cursors.up.isDown || Phaser.Input.Keyboard.JustDown(upButton))
-         && player.body.touching.down) {
-        moveBird()
+    var orly = player.body.touching.down === true;
+    if ((cursors.up.isDown || Phaser.Input.Keyboard.JustDown(upButton)) && orly) {
+        moveBird(game.scene.scenes[0])
     }
 
     pipesGroup.children.iterate(function (child) {
@@ -256,18 +258,41 @@ function update() {
         if (child.x < -50)
             child.destroy()
         else
-            child.setVelocityX(-100)
+            child.setVelocityX(-150)
     })
 
     gapsGroup.children.iterate(function (child) {
-        child.body.setVelocityX(-100)
+        child.body.setVelocityX(-150)
     })
 
     nextPipes++
+    seacowLifetime++
     if (nextPipes >= 400) {
         makePipes(game.scene.scenes[0])
-        nextPipes = 0
+        nextPipes = Phaser.Math.Between(200, 300);
     }
+
+    if (score >= 13 && seacowLifetime >= 600) {
+        launchCow(game.scene.scenes[0])
+        seacowLifetime = Phaser.Math.Between(0, 300);
+    }
+
+    // update cow angle
+    if (seacow !== undefined && seacow.body !== undefined) {
+        const vx = seacow.body.velocity.x;
+        const vy = seacow.body.velocity.y;
+        var rad = Phaser.Math.Angle.Between(vx, vy, 0, 1);
+        
+        seacow.setRotation(rad)
+        if (!seacowJumped && seacow.x < seacowJumpPoint) {
+            seacow.setVelocityY(-500)
+            seacow.body.allowGravity = true
+            seacowJumped = true;
+            seacowJumpPoint = Phaser.Math.Between(300, 400)
+        } 
+    }
+
+
 }
 
 /**
@@ -284,6 +309,16 @@ function hitBird(player) {
     restartButton.visible = true
 }
 
+function hitPlayerWithCow() {
+    this.physics.pause()
+
+    gameOver = true
+    gameStarted = false
+
+    gameOverBanner.visible = true
+    restartButton.visible = true
+}
+
 /**
  *   Update the scoreboard.
  *   @param {object} _ - Game object that overlapped, in this case the bird (ignored).
@@ -291,6 +326,7 @@ function hitBird(player) {
  */
 function updateScore(_, gap) {
     score++
+    scoreText.setText('Score: ' + score * 10);
     console.log(score)
     gap.destroy()
 }
@@ -302,14 +338,14 @@ function updateScore(_, gap) {
 function makePipes(scene) {
     if (!gameStarted || gameOver) return
 
-    const gap = scene.add.line(870, 600, 0, 0, 100, -375)
+    const gap = scene.add.line(980, 600, 0, 0, 100, -375)
     gapsGroup.add(gap)
     gap.body.allowGravity = false
-    gap.visible = true
+    gap.visible = false
 
     console.log("make pipe")
 
-    const pipe = scene.physics.add.image(800, 570, currentPipe.bottom)
+    const pipe = scene.physics.add.image(900, 570, currentPipe.bottom)
     pipe.body.setSize(50, 50)
     pipe.body.setOffset(20, 20)
     // pipe.setTint(0xC3C8CF);
@@ -319,17 +355,41 @@ function makePipes(scene) {
     // pipe.setScale(0.125)
 }
 
+function launchCow(scene) {
+    destroyCow()
+    seacow = scene.physics.add.image(1400, 1025, assets.seacow)
+    seacow.body.allowGravity = false
+    scene.physics.add.collider(player, seacow, hitPlayerWithCow, null, scene)
+    seacow.setVelocityX(-200)
+    seacow.setScale(0.125)
+}
+
+function destroyCow() {
+    if (seacow !== undefined) {
+        seacow.destroy()
+        seacowJumped = false
+    }
+}
+
 /**
  * Move the bird in the screen.
  */
-function moveBird() {
-    if (gameOver)
+function moveBird(scene) {
+    if (gameOver || !gameStarted)
         return
+    
+    if (player.body.touching.down) {
+        player.setVelocityY(-300)
+    }
+
+}
+
+function startGameOnTap() {
+    if (gameOver)
+        restartGame()
 
     if (!gameStarted)
         startGame(game.scene.scenes[0])
-
-    player.setVelocityY(-300)
 }
 
 /**
@@ -340,6 +400,7 @@ function restartGame() {
     pipesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     player.destroy()
+    destroyCow()
     gameOverBanner.visible = false
     restartButton.visible = false
 
@@ -356,6 +417,9 @@ function restartGame() {
 function prepareGame(scene) {
     framesMoveUp = 0
     nextPipes = 0
+    seacowLifetime = 0
+    seacowJumped = false
+    seacowJumpPoint = Phaser.Math.Between(300, 400)
     currentPipe = assets.obstacle.pipe.green
     score = 0
     gameOver = false
@@ -363,12 +427,12 @@ function prepareGame(scene) {
     messageInitial.visible = true
 
     birdName = assets.bird.red
-    player = scene.physics.add.image(60, 265, birdName)
+    player = scene.physics.add.image(100, 265, birdName)
     player.setScale(0.50)
     player.body.setSize(100, 100)
     player.body.setOffset(100, 110)
     player.setCollideWorldBounds(true)
-
+    
     scene.physics.add.collider(player, ground)
     scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)
 
