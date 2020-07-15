@@ -178,7 +178,7 @@ let cursors;
  */
 function preload() {
     // Backgrounds and ground
-    this.load.image(assets.scene.background.day, 'https://antego.github.io/surf-game/assets2/maroubra.jpg')
+    this.load.image(assets.scene.background.day, 'https://antego.github.io/surf-game/assets2/maroubra2.jpg')
     this.load.image(assets.scene.ground, 'https://antego.github.io/surf-game/assets2/pngwing.com.png')
 
     // Pipes
@@ -190,7 +190,7 @@ function preload() {
     // Birds
     this.load.image(assets.bird.red, 'https://antego.github.io/surf-game/assets2/dude.png')
     // Seacows
-    this.load.image(assets.seacow, 'https://antego.github.io/surf-game/assets2/seacow.png')
+    this.load.image(assets.seacow, 'https://antego.github.io/surf-game/assets2/seacow2.png')
 }
 
 /**
@@ -204,14 +204,14 @@ function create() {
     gapsGroup = this.physics.add.group()
     pipesGroup = this.physics.add.group()
 
-    ground = this.physics.add.staticImage(assets.scene.width, 600, assets.scene.ground)
+    ground = this.physics.add.staticImage(assets.scene.width, 580, assets.scene.ground)
     // ground.setTint(0x334A56);
     // ground.setCollideWorldBounds(true)
     ground.setDepth(10)
     ground.refreshBody()
-    ground.body.setSize(800, 50)
+    ground.body.setSize(800, 2)
 
-    messageInitial = this.add.text(100, 156, 'Press Up or tap to start', { fontFamily: 'serif', fontSize: '64px', fill: '#FFF' });
+    messageInitial = this.add.text(250, 156, 'Tap to start', { fontFamily: 'serif', fontSize: '64px', fill: '#FFF' });
     messageInitial.setAlign('center')
     messageInitial.setDepth(30)
     messageInitial.visible = false
@@ -355,7 +355,7 @@ function launchCow(scene) {
     seacow.body.allowGravity = false
     scene.physics.add.collider(player, seacow, hitPlayerWithCow, null, scene)
     seacow.setVelocityX(-200)
-    seacow.setScale(0.125)
+    seacow.setScale(0.5)
 }
 
 function destroyCow() {
