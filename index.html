@@ -60,9 +60,7 @@ const assets = {
             day: 'background-day',
         },
         ground: 'ground',
-        gameOver: 'game-over',
         restart: 'restart-button',
-        messageInitial: 'message-initial'
     },
     animation: {
         bird: {
@@ -180,24 +178,19 @@ let cursors;
  */
 function preload() {
     // Backgrounds and ground
-    this.load.image(assets.scene.background.day, 'assets2/maroubra.jpg')
-    this.load.image(assets.scene.ground, 'assets2/pngwing.com.png')
+    this.load.image(assets.scene.background.day, 'https://antego.github.io/surf-game/assets2/maroubra.jpg')
+    this.load.image(assets.scene.ground, 'https://antego.github.io/surf-game/assets2/pngwing.com.png')
 
     // Pipes
-    this.load.image(assets.obstacle.pipe.green.bottom, 'assets2/wave2.png')
-
-
-    // Start game
-    this.load.image(assets.scene.messageInitial, 'assets2/message-initial.png')
+    this.load.image(assets.obstacle.pipe.green.bottom, 'https://antego.github.io/surf-game/assets2/wave2.png')
 
     // End game
-    this.load.image(assets.scene.gameOver, 'assets2/gameover.png')
-    this.load.image(assets.scene.restart, 'assets2/restart-button.png')
+    this.load.image(assets.scene.restart, 'https://antego.github.io/surf-game/assets2/restart-button.png')
 
     // Birds
-    this.load.image(assets.bird.red, 'assets2/dude.png')
+    this.load.image(assets.bird.red, 'https://antego.github.io/surf-game/assets2/dude.png')
     // Seacows
-    this.load.image(assets.seacow, 'assets2/seacow.png')
+    this.load.image(assets.seacow, 'https://antego.github.io/surf-game/assets2/seacow.png')
 }
 
 /**
@@ -218,18 +211,19 @@ function create() {
     ground.refreshBody()
     ground.body.setSize(800, 50)
 
-    messageInitial = this.add.text(100, 156, 'Tap on the screen to start', { fontFamily: 'serif', fontSize: '48px', fill: '#000', align: 'center' });
+    messageInitial = this.add.text(100, 156, 'Press Up or tap to start', { fontFamily: 'serif', fontSize: '64px', fill: '#FFF' });
+    messageInitial.setAlign('center')
     messageInitial.setDepth(30)
     messageInitial.visible = false
 
     upButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP)
 
     cursors = this.input.keyboard.createCursorKeys();
-    scoreText = this.add.text(16, 16, 'Score: 0', { fontFamily: 'serif', fontSize: '48px', fill: '#000' });
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontFamily: 'serif', fontSize: '64px', fill: '#FFF' });
 
     prepareGame(this)
     
-    gameOverBanner = this.add.image(assets.scene.width, 206, assets.scene.gameOver)
+    gameOverBanner = this.add.text(300, 156, 'Dunked', { fontFamily: 'serif', fontSize: '64px', fill: '#FFF' });
     gameOverBanner.setDepth(20)
     gameOverBanner.visible = false
 
@@ -422,6 +416,7 @@ function prepareGame(scene) {
     seacowJumpPoint = Phaser.Math.Between(300, 400)
     currentPipe = assets.obstacle.pipe.green
     score = 0
+    scoreText.setText('Score: 0');
     gameOver = false
     backgroundDay.visible = true
     messageInitial.visible = true
